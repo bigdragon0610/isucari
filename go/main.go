@@ -329,6 +329,9 @@ func getUserByID(q sqlx.Queryer, userID int64) (user User, err error) {
 	users[userID] = user
 	return user, nil
 }
+func updateUser(user User) {
+	users[user.ID] = user
+}
 
 func init() {
 	store = sessions.NewCookieStore([]byte("abc"))
@@ -2097,6 +2100,12 @@ func postSell(w http.ResponseWriter, r *http.Request) {
 		now,
 		seller.ID,
 	)
+
+	newSeller := seller
+	newSeller.NumSellItems++
+	newSeller.LastBump = now
+	updateUser(newSeller)
+
 	if err != nil {
 		log.Print(err)
 
@@ -2198,6 +2207,11 @@ func postBump(w http.ResponseWriter, r *http.Request) {
 		now,
 		seller.ID,
 	)
+
+	newSeller := seller
+	newSeller.LastBump = now
+	updateUser(newSeller)
+
 	if err != nil {
 		log.Print(err)
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")

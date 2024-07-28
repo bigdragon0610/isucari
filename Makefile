@@ -44,6 +44,7 @@ slow-query:
 # alpでアクセスログを確認する
 .PHONY: exec-bench
 exec-bench:
+    cd /home/isucon/isucari/
 	../bin/benchmarker -target-url http://127.0.0.1:80
 
 # alpでアクセスログを確認する

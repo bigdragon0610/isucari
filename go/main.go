@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -476,6 +477,23 @@ func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 	return user, http.StatusOK, ""
 }
 
+// getUserFromCache retrieves a user from cache or database
+func getUserFromCache(q sqlx.Queryer, userID int64) (UserSimple, error) {
+	// Try to get the user from the cache
+	if cachedUser, found := userCache.Load(userID); found {
+		return cachedUser.(UserSimple), nil
+	}
+
+	// If not found in cache, fetch from DB and cache it
+	userSimple, err := getUserSimpleByID(q, userID)
+	if err != nil {
+		return UserSimple{}, err
+	}
+
+	userCache.Store(userID, userSimple)
+	return userSimple, nil
+}
+
 func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err error) {
 	user := User{}
 	err = sqlx.Get(q, &user, "SELECT * FROM `users` WHERE `id` = ?", userID)
@@ -917,6 +935,12 @@ func getUserItems(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rui)
 }
 
+var userCache sync.Map
+var itemCache sync.Map
+var categoryCache sync.Map
+var evidenceCache sync.Map
+var shippingCache sync.Map
+
 func getTransactions(w http.ResponseWriter, r *http.Request) {
 
 	user, errCode, errMsg := getUser(r)
@@ -984,7 +1008,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 
 	itemDetails := []ItemDetail{}
 	for _, item := range items {
-		seller, err := getUserSimpleByID(tx, item.SellerID)
+		seller, err := getUserFromCache(tx, item.SellerID)
 		if err != nil {
 			outputErrorMsg(w, http.StatusNotFound, "seller not found")
 			tx.Rollback()
@@ -1017,7 +1041,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if item.BuyerID != 0 {
-			buyer, err := getUserSimpleByID(tx, item.BuyerID)
+			buyer, err := getUserFromCache(tx, item.BuyerID)
 			if err != nil {
 				outputErrorMsg(w, http.StatusNotFound, "buyer not found")
 				tx.Rollback()

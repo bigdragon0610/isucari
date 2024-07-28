@@ -336,6 +336,13 @@ func getCategoryByID(categoryID int) (Category, error) {
 	if !exists {
 		return category, fmt.Errorf("category not found")
 	}
+	if category.ParentID != 0 {
+		parentCategory, exists := categoryMap[category.ParentID]
+		if !exists {
+			return category, fmt.Errorf("parent category not found")
+		}
+		category.ParentCategoryName = parentCategory.CategoryName
+	}
 	return category, nil
 }
 

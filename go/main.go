@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -317,7 +318,7 @@ var categories = []Category{
 
 func init() {
 	store = sessions.NewCookieStore([]byte("abc"))
-
+	log.SetOutput(io.Discard)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
 	templates = template.Must(template.ParseFiles(

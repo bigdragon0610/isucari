@@ -315,6 +315,21 @@ var categories = []Category{
 	{ID: 66, ParentID: 60, CategoryName: "空気椅子"},
 }
 
+var users = map[int64]User{}
+
+func getUserByID(q sqlx.Queryer, userID int64) (user User, err error) {
+	user, exists := users[userID]
+	if exists {
+		return user, nil
+	}
+	err = sqlx.Get(q, &user, "SELECT * FROM `users` WHERE `id` = ?", userID)
+	if err != nil {
+		return user, err
+	}
+	users[userID] = user
+	return user, nil
+}
+
 func init() {
 	store = sessions.NewCookieStore([]byte("abc"))
 
@@ -477,8 +492,7 @@ func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 }
 
 func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err error) {
-	user := User{}
-	err = sqlx.Get(q, &user, "SELECT * FROM `users` WHERE `id` = ?", userID)
+	user, err := getUserByID(q, userID)
 	if err != nil {
 		return userSimple, err
 	}

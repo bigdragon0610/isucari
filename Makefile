@@ -41,9 +41,9 @@ slow-query:
 	sudo pt-query-digest $(DB_SLOW_LOG) > $${filename}
 
 
-# slow queryを確認する
+# alpでアクセスログを確認する
 .PHONY: exec-bench
-exec-bench: 
+exec-bench:
 	../bin/benchmarker -target-url http://127.0.0.1:80
 
 # alpでアクセスログを確認する

@@ -1051,7 +1051,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			itemDetail.Buyer = &buyer
 		}
 
-		transactionEvidence, err := getTransactionEvidenceFromCache(tx, item.ID)
+		transactionEvidence := TransactionEvidence{}
+		err = tx.Get(&transactionEvidence, "SELECT * FROM `transaction_evidences` WHERE `item_id` = ?", item.ID)
 		if err != nil && err != sql.ErrNoRows {
 			log.Print(err)
 			outputErrorMsg(w, http.StatusInternalServerError, "db error")

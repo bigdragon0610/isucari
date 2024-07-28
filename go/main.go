@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	crand "crypto/rand"
 	"database/sql"
 	"encoding/json"
@@ -14,7 +13,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -62,11 +60,9 @@ const (
 )
 
 var (
-	templates           *template.Template
-	dbx                 *sqlx.DB
-	store               sessions.Store
-	cachedIndexTemplate []byte
-	cacheOnce           sync.Once
+	templates *template.Template
+	dbx       *sqlx.DB
+	store     sessions.Store
 )
 
 type Config struct {
@@ -534,19 +530,7 @@ func getShipmentServiceURL() string {
 }
 
 func getIndex(w http.ResponseWriter, r *http.Request) {
-	// 初回のアクセス時にのみテンプレートをキャッシュする
-	cacheOnce.Do(func() {
-		tmpl := template.Must(template.ParseFiles("index.html"))
-		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, struct{}{}); err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		cachedIndexTemplate = buf.Bytes()
-	})
-	// キャッシュされたテンプレートをレスポンスとして返す
-	w.Header().Set("Content-Type", "text/html")
-	w.Write(cachedIndexTemplate)
+	templates.ExecuteTemplate(w, "index.html", struct{}{})
 }
 
 func postInitialize(w http.ResponseWriter, r *http.Request) {

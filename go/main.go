@@ -105,7 +105,6 @@ type ItemWithUser struct {
 	Seller              UserSimple          `json:"seller"`
 	Buyer               UserSimple          `json:"buyer"`
 	Category            Category            `json:"category"`
-	SubCategory         Category            `json:"subcategory"`
 	TransactionEvidence TransactionEvidence `json:"transaction_evidence"`
 }
 
@@ -961,7 +960,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	if itemID > 0 && createdAt > 0 {
 		// paging
 		err := tx.Select(&items,
-			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) AND (`created_at` < ?  OR (`created_at` <= ? AND `id` < ?) JOIN `users` ON `items`.`seller_id` = `users`.`id` JOIN `users` ON `items`.`buyer_id` = `users`.`id` JOIN `categories` ON `items`.`category_id` = `categories`.`id` JOIN `subcategories` ON `items`.`subcategory_id` = `subcategories`.`id` JOIN `transaction_evidences` ON `items`.`id` = `transaction_evidences`.`item_id` JOIN `shippings` ON `transaction_evidences`.`id` = `shippings`.`transaction_evidence_id` ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
+			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) AND (`created_at` < ?  OR (`created_at` <= ? AND `id` < ?) JOIN `users` ON `items`.`seller_id` = `users`.`id` JOIN `users` ON `items`.`buyer_id` = `users`.`id` JOIN `categories` ON `items`.`category_id` = `categories`.`id` JOIN `transaction_evidences` ON `items`.`id` = `transaction_evidences`.`item_id` JOIN `shippings` ON `transaction_evidences`.`id` = `shippings`.`transaction_evidence_id` ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
 			user.ID,
 			user.ID,
 			time.Unix(createdAt, 0),
@@ -978,7 +977,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// 1st page
 		err := tx.Select(&items,
-			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?)JOIN `users` ON `items`.`seller_id` = `users`.`id` JOIN `users` ON `items`.`buyer_id` = `users`.`id` JOIN `categories` ON `items`.`category_id` = `categories`.`id` JOIN `subcategories` ON `items`.`subcategory_id` = `subcategories`.`id` JOIN `transaction_evidences` ON `items`.`id` = `transaction_evidences`.`item_id` JOIN `shippings` ON `transaction_evidences`.`id` = `shippings`.`transaction_evidence_id` ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
+			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?)JOIN `users` ON `items`.`seller_id` = `users`.`id` JOIN `users` ON `items`.`buyer_id` = `users`.`id` JOIN `categories` ON `items`.`category_id` = `categories`.`id` JOIN `transaction_evidences` ON `items`.`id` = `transaction_evidences`.`item_id` JOIN `shippings` ON `transaction_evidences`.`id` = `shippings`.`transaction_evidence_id` ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
 			user.ID,
 			user.ID,
 			TransactionsPerPage+1,

@@ -101,11 +101,12 @@ type Item struct {
 }
 
 type ItemWithUser struct {
-	Item                `json:"item"`
+	Item                Item                `json:"item"`
 	Seller              UserSimple          `json:"seller"`
 	Buyer               UserSimple          `json:"buyer"`
 	Category            Category            `json:"category"`
 	TransactionEvidence TransactionEvidence `json:"transaction_evidence"`
+	Shipping            Shipping            `json:"shipping"`
 }
 
 type ItemSimple struct {
@@ -960,7 +961,22 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	if itemID > 0 && createdAt > 0 {
 		// paging
 		err := tx.Select(&items,
-			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) AND (`created_at` < ?  OR (`created_at` <= ? AND `id` < ?) JOIN `users` ON `items`.`seller_id` = `users`.`id` AS `seller` JOIN `users` ON `items`.`buyer_id` = `users`.`id` AS `buyer` JOIN `categories` ON `items`.`category_id` = `categories`.`id` AS `category` JOIN `transaction_evidences` ON `items`.`id` = `transaction_evidences`.`item_id` AS `transaction_evidence` JOIN `shippings` ON `transaction_evidences`.`id` = `shippings`.`transaction_evidence_id` AS `shipping` ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
+			`SELECT items.*, 
+									seller.id AS "seller.id", seller.name AS "seller.name",
+									buyer.id AS "buyer.id", buyer.name AS "buyer.name",
+									categories.*, 
+									transaction_evidences.*, 
+									shippings.* 
+					FROM items
+					JOIN users AS seller ON items.seller_id = seller.id
+					JOIN users AS buyer ON items.buyer_id = buyer.id
+					JOIN categories ON items.category_id = categories.id
+					JOIN transaction_evidences ON items.id = transaction_evidences.item_id
+					JOIN shippings ON transaction_evidences.id = shippings.transaction_evidence_id
+					WHERE (items.seller_id = ? OR items.buyer_id = ?)
+						AND (items.created_at < ?  OR (items.created_at <= ? AND items.id < ?))
+					ORDER BY items.created_at DESC, items.id DESC 
+					LIMIT ?`,
 			user.ID,
 			user.ID,
 			time.Unix(createdAt, 0),
@@ -977,7 +993,21 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// 1st page
 		err := tx.Select(&items,
-			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?)JOIN `users` ON `items`.`seller_id` = `users`.`id` AS `seller` JOIN `users` ON `items`.`buyer_id` = `users`.`id` AS `buyer` JOIN `categories` ON `items`.`category_id` = `categories`.`id` AS `category` JOIN `transaction_evidences` ON `items`.`id` = `transaction_evidences`.`item_id` AS `transaction_evidence` JOIN `shippings` ON `transaction_evidences`.`id` = `shippings`.`transaction_evidence_id` AS `shipping` ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
+			`SELECT items.*, 
+									seller.id AS "seller.id", seller.name AS "seller.name",
+									buyer.id AS "buyer.id", buyer.name AS "buyer.name",
+									categories.*, 
+									transaction_evidences.*, 
+									shippings.* 
+					FROM items
+					JOIN users AS seller ON items.seller_id = seller.id
+					JOIN users AS buyer ON items.buyer_id = buyer.id
+					JOIN categories ON items.category_id = categories.id
+					JOIN transaction_evidences ON items.id = transaction_evidences.item_id
+					JOIN shippings ON transaction_evidences.id = shippings.transaction_evidence_id
+					WHERE items.seller_id = ? OR items.buyer_id = ?
+					ORDER BY items.created_at DESC, items.id DESC 
+					LIMIT ?`,
 			user.ID,
 			user.ID,
 			TransactionsPerPage+1,
@@ -993,20 +1023,20 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	itemDetails := []ItemDetail{}
 	for _, item := range items {
 		itemDetail := ItemDetail{
-			ID:                        item.ID,
-			SellerID:                  item.SellerID,
+			ID:                        item.Item.ID,
+			SellerID:                  item.Seller.ID,
 			Seller:                    &item.Seller,
-			BuyerID:                   item.BuyerID,
+			BuyerID:                   item.Buyer.ID,
 			Buyer:                     &item.Buyer,
-			Status:                    item.Status,
-			Name:                      item.Name,
-			Price:                     item.Price,
-			Description:               item.Description,
-			ImageURL:                  getImageURL(item.ImageName),
+			Status:                    item.Item.Status,
+			Name:                      item.Item.Name,
+			Price:                     item.Item.Price,
+			Description:               item.Item.Description,
+			ImageURL:                  getImageURL(item.Item.ImageName),
 			Category:                  &item.Category,
 			TransactionEvidenceID:     item.TransactionEvidence.ID,
 			TransactionEvidenceStatus: item.TransactionEvidence.Status,
-			CreatedAt:                 item.CreatedAt.Unix(),
+			CreatedAt:                 item.Item.CreatedAt.Unix(),
 		}
 		itemDetails = append(itemDetails, itemDetail)
 	}

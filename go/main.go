@@ -102,8 +102,8 @@ type Item struct {
 
 type ItemWithUser struct {
 	Item                Item                `json:"item"`
-	Seller              UserSimple          `json:"seller"`
-	Buyer               UserSimple          `json:"buyer"`
+	Seller              User                `json:"seller"`
+	Buyer               User                `json:"buyer"`
 	Category            Category            `json:"category"`
 	TransactionEvidence TransactionEvidence `json:"transaction_evidence"`
 	Shipping            Shipping            `json:"shipping"`
@@ -968,8 +968,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 									transaction_evidences.*, 
 									shippings.* 
 					FROM items
-					JOIN users AS seller ON items.seller_id = users.id
-					JOIN users AS buyer ON items.buyer_id = users.id
+					JOIN users AS seller ON items.seller_id = seller.id
+					JOIN users AS buyer ON items.buyer_id = buyer.id
 					JOIN categories ON items.category_id = categories.id
 					JOIN transaction_evidences ON items.id = transaction_evidences.item_id
 					JOIN shippings ON transaction_evidences.id = shippings.transaction_evidence_id
@@ -1000,8 +1000,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 									transaction_evidences.*, 
 									shippings.* 
 					FROM items
-					JOIN users AS seller ON items.seller_id = users.id
-					JOIN users AS buyer ON items.buyer_id = users.id
+					JOIN users AS seller ON items.seller_id = seller.id
+					JOIN users AS buyer ON items.buyer_id = buyer.id
 					JOIN categories ON items.category_id = categories.id
 					JOIN transaction_evidences ON items.id = transaction_evidences.item_id
 					JOIN shippings ON transaction_evidences.id = shippings.transaction_evidence_id
@@ -1023,11 +1023,19 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	itemDetails := []ItemDetail{}
 	for _, item := range items {
 		itemDetail := ItemDetail{
-			ID:                        item.Item.ID,
-			SellerID:                  item.Seller.ID,
-			Seller:                    &item.Seller,
-			BuyerID:                   item.Buyer.ID,
-			Buyer:                     &item.Buyer,
+			ID:       item.Item.ID,
+			SellerID: item.Seller.ID,
+			Seller: &UserSimple{
+				ID:           item.Seller.ID,
+				AccountName:  item.Seller.AccountName,
+				NumSellItems: item.Seller.NumSellItems,
+			},
+			BuyerID: item.Buyer.ID,
+			Buyer: &UserSimple{
+				ID:           item.Buyer.ID,
+				AccountName:  item.Buyer.AccountName,
+				NumSellItems: item.Buyer.NumSellItems,
+			},
 			Status:                    item.Item.Status,
 			Name:                      item.Item.Name,
 			Price:                     item.Item.Price,

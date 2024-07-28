@@ -1423,7 +1423,7 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print(err)
 
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
+		outputErrorMsg(w, http.StatusInternalServerError, "db error 1")
 		tx.Rollback()
 		return
 	}
@@ -1432,7 +1432,7 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print(err)
 
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
+		outputErrorMsg(w, http.StatusInternalServerError, "db error 2")
 		tx.Rollback()
 		return
 	}
@@ -1446,7 +1446,7 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print(err)
 
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
+		outputErrorMsg(w, http.StatusInternalServerError, "db error 3")
 		tx.Rollback()
 		return
 	}
@@ -1513,7 +1513,7 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print(err)
 
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
+		outputErrorMsg(w, http.StatusInternalServerError, "db error 4")
 		tx.Rollback()
 		return
 	}

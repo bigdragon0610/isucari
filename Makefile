@@ -33,12 +33,7 @@ bench: build rm-logs deploy-conf restart
 # slow queryを確認する
 .PHONY: slow-query
 slow-query: 
-	# 現在の時刻を取得してファイル名に使用する
-	timestamp=$(shell date +%Y%m%d_%H%M%S)
-	mkdir -p ./slow-query # ディレクトリを作成
-	filename="./slow-query/slow_query_$${timestamp}.log"
-	echo "Saving slow query log to $${filename}"
-	sudo pt-query-digest $(DB_SLOW_LOG) > $${filename}
+	sudo pt-query-digest $(DB_SLOW_LOG)
 
 
 # alpでアクセスログを確認する

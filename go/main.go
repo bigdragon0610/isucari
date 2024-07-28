@@ -476,6 +476,21 @@ func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 	return user, http.StatusOK, ""
 }
 
+func getUserId(r *http.Request) (userID int64, errCode int, errMsg string) {
+	session := getSession(r)
+	id, ok := session.Values["user_id"]
+	if !ok {
+		return 0, http.StatusNotFound, "no session"
+	}
+
+	userID, ok = id.(int64)
+	if !ok {
+		return 0, http.StatusInternalServerError, "invalid user_id type"
+	}
+
+	return userID, http.StatusOK, ""
+}
+
 func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err error) {
 	user := User{}
 	err = sqlx.Get(q, &user, "SELECT * FROM `users` WHERE `id` = ?", userID)
@@ -919,7 +934,7 @@ func getUserItems(w http.ResponseWriter, r *http.Request) {
 
 func getTransactions(w http.ResponseWriter, r *http.Request) {
 
-	user, errCode, errMsg := getUser(r)
+	userId, errCode, errMsg := getUserId(r)
 	if errMsg != "" {
 		outputErrorMsg(w, errCode, errMsg)
 		return
@@ -953,8 +968,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		// paging
 		err := tx.Select(&items,
 			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) AND (`created_at` < ?  OR (`created_at` <= ? AND `id` < ?)) ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
-			user.ID,
-			user.ID,
+			userId,
+			userId,
 			time.Unix(createdAt, 0),
 			time.Unix(createdAt, 0),
 			itemID,
@@ -970,8 +985,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		// 1st page
 		err := tx.Select(&items,
 			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
-			user.ID,
-			user.ID,
+			userId,
+			userId,
 			TransactionsPerPage+1,
 		)
 		if err != nil {
@@ -1094,7 +1109,7 @@ func getItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, errCode, errMsg := getUser(r)
+	userId, errCode, errMsg := getUserId(r)
 	if errMsg != "" {
 		outputErrorMsg(w, errCode, errMsg)
 		return
@@ -1143,7 +1158,7 @@ func getItem(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: item.CreatedAt.Unix(),
 	}
 
-	if (user.ID == item.SellerID || user.ID == item.BuyerID) && item.BuyerID != 0 {
+	if (userId == item.SellerID || userId == item.BuyerID) && item.BuyerID != 0 {
 		buyer, err := getUserSimpleByID(dbx, item.BuyerID)
 		if err != nil {
 			outputErrorMsg(w, http.StatusNotFound, "buyer not found")

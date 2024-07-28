@@ -40,6 +40,12 @@ slow-query:
 	@echo "Saving slow query log to $${filename}"
 	sudo pt-query-digest $(DB_SLOW_LOG) > $${filename}
 
+
+# slow queryを確認する
+.PHONY: exec-bench
+exec-bench: 
+	./bin/benchmarker -target-url http://127.0.0.1:80
+
 # alpでアクセスログを確認する
 .PHONY: alp
 alp:

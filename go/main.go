@@ -968,8 +968,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 									transaction_evidences.*, 
 									shippings.* 
 					FROM items
-					JOIN users AS seller ON items.seller_id = seller.id
-					JOIN users AS buyer ON items.buyer_id = buyer.id
+					JOIN users AS seller ON items.seller_id = users.id
+					JOIN users AS buyer ON items.buyer_id = users.id
 					JOIN categories ON items.category_id = categories.id
 					JOIN transaction_evidences ON items.id = transaction_evidences.item_id
 					JOIN shippings ON transaction_evidences.id = shippings.transaction_evidence_id
@@ -1000,8 +1000,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 									transaction_evidences.*, 
 									shippings.* 
 					FROM items
-					JOIN users AS seller ON items.seller_id = seller.id
-					JOIN users AS buyer ON items.buyer_id = buyer.id
+					JOIN users AS seller ON items.seller_id = users.id
+					JOIN users AS buyer ON items.buyer_id = users.id
 					JOIN categories ON items.category_id = categories.id
 					JOIN transaction_evidences ON items.id = transaction_evidences.item_id
 					JOIN shippings ON transaction_evidences.id = shippings.transaction_evidence_id

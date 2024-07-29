@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -476,6 +477,23 @@ func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 	return user, http.StatusOK, ""
 }
 
+// getUserFromCache retrieves a user from cache or database
+func getUserFromCache(q sqlx.Queryer, userID int64) (UserSimple, error) {
+	// Try to get the user from the cache
+	if cachedUser, found := userCache.Load(userID); found {
+		return cachedUser.(UserSimple), nil
+	}
+
+	// If not found in cache, fetch from DB and cache it
+	userSimple, err := getUserSimpleByID(q, userID)
+	if err != nil {
+		return UserSimple{}, err
+	}
+
+	userCache.Store(userID, userSimple)
+	return userSimple, nil
+}
+
 func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err error) {
 	user := User{}
 	err = sqlx.Get(q, &user, "SELECT * FROM `users` WHERE `id` = ?", userID)
@@ -917,6 +935,12 @@ func getUserItems(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rui)
 }
 
+var userCache sync.Map
+var itemCache sync.Map
+var categoryCache sync.Map
+var evidenceCache sync.Map
+var shippingCache sync.Map
+
 func getTransactions(w http.ResponseWriter, r *http.Request) {
 
 	user, errCode, errMsg := getUser(r)
@@ -1030,7 +1054,6 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		transactionEvidence := TransactionEvidence{}
 		err = tx.Get(&transactionEvidence, "SELECT * FROM `transaction_evidences` WHERE `item_id` = ?", item.ID)
 		if err != nil && err != sql.ErrNoRows {
-			// It's able to ignore ErrNoRows
 			log.Print(err)
 			outputErrorMsg(w, http.StatusInternalServerError, "db error")
 			tx.Rollback()
@@ -1038,8 +1061,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if transactionEvidence.ID > 0 {
-			shipping := Shipping{}
-			err = tx.Get(&shipping, "SELECT * FROM `shippings` WHERE `transaction_evidence_id` = ?", transactionEvidence.ID)
+			shipping, err := getShippingFromCache(tx, transactionEvidence.ID)
 			if err == sql.ErrNoRows {
 				outputErrorMsg(w, http.StatusNotFound, "shipping not found")
 				tx.Rollback()
@@ -1060,7 +1082,6 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 				tx.Rollback()
 				return
 			}
-
 			itemDetail.TransactionEvidenceID = transactionEvidence.ID
 			itemDetail.TransactionEvidenceStatus = transactionEvidence.Status
 			itemDetail.ShippingStatus = ssr.Status
@@ -1086,6 +1107,28 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func getTransactionEvidenceFromCache(tx *sqlx.Tx, itemID int64) (TransactionEvidence, error) {
+	if cachedEvidence, found := evidenceCache.Load(itemID); found {
+		return cachedEvidence.(TransactionEvidence), nil
+	}
+	var evidence TransactionEvidence
+	err := tx.Get(&evidence, "SELECT * FROM `transaction_evidences` WHERE `item_id` = ?", itemID)
+	if err == nil {
+		evidenceCache.Store(itemID, evidence)
+	}
+	return evidence, err
+}
+func getShippingFromCache(tx *sqlx.Tx, evidenceID int64) (Shipping, error) {
+	if cachedShipping, found := shippingCache.Load(evidenceID); found {
+		return cachedShipping.(Shipping), nil
+	}
+	var shipping Shipping
+	err := tx.Get(&shipping, "SELECT * FROM `shippings` WHERE `transaction_evidence_id` = ?", evidenceID)
+	if err == nil {
+		shippingCache.Store(evidenceID, shipping)
+	}
+	return shipping, err
+}
 func getItem(w http.ResponseWriter, r *http.Request) {
 	itemIDStr := pat.Param(r, "item_id")
 	itemID, err := strconv.ParseInt(itemIDStr, 10, 64)

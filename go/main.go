@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -457,6 +458,8 @@ func getCSRFToken(r *http.Request) string {
 	return csrfToken.(string)
 }
 
+var userCache sync.Map // Global cache for storing user data
+
 func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 	session := getSession(r)
 	userID, ok := session.Values["user_id"]
@@ -464,6 +467,12 @@ func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 		return user, http.StatusNotFound, "no session"
 	}
 
+	// Check if user is in cache
+	if cachedUser, found := userCache.Load(userID); found {
+		return cachedUser.(User), http.StatusOK, ""
+	}
+
+	// If not in cache, fetch from DB
 	err := dbx.Get(&user, "SELECT * FROM `users` WHERE `id` = ?", userID)
 	if err == sql.ErrNoRows {
 		return user, http.StatusNotFound, "user not found"
@@ -472,6 +481,9 @@ func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 		log.Print(err)
 		return user, http.StatusInternalServerError, "db error"
 	}
+
+	// Store the result in the cache
+	userCache.Store(userID, user)
 
 	return user, http.StatusOK, ""
 }
